@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Інтерактивний квест з мінної безпеки</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .quest-container { max-width: 700px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .hud { display: flex; justify-content: space-between; background: #2c3e50; color: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; }
+        .scene-title { color: #d35400; border-bottom: 2px solid #e67e22; padding-bottom: 5px; }
+        .dialogue { background: #edf2f7; border-left: 4px solid #3182ce; padding: 12px; margin: 15px 0; border-radius: 0 8px 8px 0; }
+        .btn-option { display: block; width: 100%; text-align: left; background: #3182ce; color: white; border: none; padding: 12px 15px; margin: 8px 0; border-radius: 6px; cursor: pointer; font-size: 15px; transition: background 0.2s; }
+        .btn-option:hover { background: #2b6cb0; }
+        .safety-pause { background: #fff5f5; border: 2px solid #e53e3e; padding: 15px; border-radius: 8px; color: #9b2c2c; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="quest-container">
+    <div class="hud">
+        <div>Обізнаність: <span id="awareness">0</span>%</div>
+        <div>Баланс безпеки: <span id="safety">100</span> балів</div>
+    </div>
+
+    <div id="game-box">
+        <!-- Вміст сцен завантажується скриптом -->
+    </div>
+</div>
+
+<script>
+    let currentScene = 1;
+    let awarenessScore = 0;
+    let safetyPoints = 100;
+
+    const scenes = {
+        1: {
+            title: "Сцена 1: Вхід на територію закинутого заводу",
+            text: "Ви з друзями підійшли до паркану закинутої промзони. На воротах висить червоний трикутник з написом 'НЕ ПІДХОДЬ! МІНИ!'. У паркані є пролом.",
+            dialogue: "<b>Макс:</b> 'Заходимо! Знімемо крутий ролик!'<br><b>Софія:</b> 'Ні! Це ж знак мінної небезпеки ДСНС!'",
+            options: [
+                { text: "Послухати Софію: зупинитися та розвернути групу назад.", next: 2, points: 20, correct: true },
+                { text: "Проігнорувати знак і зайти на 1 хвилину.", next: 1, error: "Знак 'МІНИ!' забороняє будь-який вхід! Земля поруч може бути замінована.", penalty: 20 },
+                { text: "Зняти знак зі стовпа як трофей.", next: 1, error: "Знімати чи пошкоджувати знаки безпеки категорично заборонено!", penalty: 20 }
+            ]
+        },
+        2: {
+            title: "Сцена 2: Стежка у високій траві",
+            text: "У закинутому дворі Софія помічає тонку волосінь, натягнуту між кілочками на висоті 15 см від землі.",
+            dialogue: "<b>Денис:</b> 'Давайте я просто переступлю або переріжу її!'<br><b>Софія:</b> 'Завмерли всі! Це розтяжка!'",
+            options: [
+                { text: "Завмерти, не торкатися волосіні, обережно повернутися своїми слідами.", next: 3, points: 25, correct: true },
+                { text: "Переступити волосінь і піти далі.", next: 2, error: "Розтяжка з'єднана з міною! Будь-який зачіп викликає вибух!", penalty: 20 },
+                { text: "Перерізати волосінь ніжками.", next: 2, error: "Перерізання або натяг викликає миттєвий вибух!", penalty: 20 }
+            ]
+        },
+        3: {
+            title: "Фінал: Викликаємо службу 101",
+            text: "Ви успішно вийшли з небезпечної зони на асфальтовану дорогу.",
+            dialogue: "<b>Софія:</b> 'Терміново телефонуємо на 101!'",
+            options: [
+                { text: "Зателефонувати 101, назвати ім'я, адреси та опис знахідки.", next: 'win', points: 55, correct: true }
+            ]
+        }
+    };
+
+    function renderScene(sceneId) {
+        const scene = scenes[sceneId];
+        const box = document.getElementById('game-box');
+
+        if (sceneId === 'win') {
+            box.innerHTML = `
+                <h2 class="scene-title">Вітаємо! Квест успішно пройдено!</h2>
+                <p>Ви показали відмінний рівень обізнаності з мінної безпеки. Рятувальники ДСНС вже виїхали за вашим викликом.</p>
+                <div class="safety-pause" style="background:#f0fff4; border-color:#38a169; color:#22543d;">
+                    <b>Золоте правило ДСНС:</b> Стій! Не підходь! Не чіпай! Телефонуй 101!
+                </div>
+            `;
+            return;
+        }
+
+        let optionsHTML = '';
+        scene.options.forEach((opt, idx) => {
+            optionsHTML += `<button class="btn-option" onclick="makeChoice(${sceneId}, ${idx})">${opt.text}</button>`;
+        });
+
+        box.innerHTML = `
+            <h2 class="scene-title">${scene.title}</h2>
+            <p>${scene.text}</p>
+            <div class="dialogue">${scene.dialogue}</div>
+            <div>${optionsHTML}</div>
+            <div id="error-msg"></div>
+        `;
+    }
+
+    function makeChoice(sceneId, optionIdx) {
+        const option = scenes[sceneId].options[optionIdx];
+        if (option.correct) {
+            awarenessScore += option.points;
+            document.getElementById('awareness').innerText = Math.min(awarenessScore, 100);
+            renderScene(option.next);
+        } else {
+            safetyPoints -= option.penalty;
+            document.getElementById('safety').innerText = Math.max(safetyPoints, 0);
+            document.getElementById('error-msg').innerHTML = `
+                <div class="safety-pause">
+                    <b>SAFETY PAUSE (Помилка!):</b> ${option.error}<br>
+                    <i>Спробуйте ще раз з Контрольної точки!</i>
+                </div>
+            `;
+        }
+    }
+
+    renderScene(1);
+</script>
+</body>
+</html>
